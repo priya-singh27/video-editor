@@ -4,6 +4,7 @@ const fs = require("node:fs/promises");
 const {pipeline} = require("node:stream/promises");
 const utils = require('../../lib/utils');
 const DB = require('../DB');
+const FF = require('../../lib/FF');
 
 const getVideos = (req, res, handleErr) => {
     const name = req.params.get("name");
@@ -27,16 +28,24 @@ const uploadVideo = async(req, res, handleErr)=>{
         const originalFilePath = `./storage/${videoId}/original.${extension}`;
         const file = await fs.open(originalFilePath, "w");
         const fileStream = file.createWriteStream();
+        const thumbnailPath = `./storage/${videoId}/thumbnail.jpg`;
 
         // req.pipe(fileStream);
         await pipeline(req, fileStream);
 
+        //Make a thumbnail for the video file
+        await FF.makeThumbnail(originalFilePath, thumbnailPath);
+
+        //Get the dimensions
+        const dimensions = await FF.getDimensions(originalFilePath);
+        console.log(dimensions);
         DB.update();
         DB.videos.unshift({
             id: DB.videos.length,
             videoId,
             filename,
             extension,
+            dimensions,
             userId: req.userId,
             extractedAudion:false,
             resizes: {}
