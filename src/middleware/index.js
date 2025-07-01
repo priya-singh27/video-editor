@@ -10,15 +10,22 @@ exports.authenticate = (req, res, next) => {
   ];
 
   if (routesToAuthenticate.indexOf(req.method + " " + req.url) !== -1) {
-    // If we have a token cookie, then save the userId to the req object
     if (req.headers.cookie) {
-      const token = req.headers.cookie.split("=")[1];
+      const cookies = req.headers.cookie.split(";").reduce((acc, cookie) => {
+        const [name, value] = cookie.trim().split("=");
+        acc[name] = value;
+        return acc;
+      }, {});
 
-      DB.update();
-      const session = DB.sessions.find((session) => session.token === token);
-      if (session) {
-        req.userId = session.userId;
-        return next();
+      const token = cookies.token;
+
+      if (token) {
+        DB.update();
+        const session = DB.sessions.find((session) => session.token === token);
+        if (session) {
+          req.userId = session.userId;
+          return next();
+        }
       }
     }
 

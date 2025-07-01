@@ -38,12 +38,13 @@ const uploadVideo = async(req, res, handleErr)=>{
         // req.pipe(fileStream);
         await pipeline(req, fileStream);
 
-        //Make a thumbnail for the video file
+        //Make a thumbnail for the videvideo.extensiono file
         await FF.makeThumbnail(originalFilePath, thumbnailPath);
 
         //Get the dimensions
         const dimensions = await FF.getDimensions(originalFilePath);
         console.log(dimensions);
+        
         DB.update();
         DB.videos.unshift({
             id: DB.videos.length,
@@ -66,9 +67,62 @@ const uploadVideo = async(req, res, handleErr)=>{
     }
 }
 
+const getVideoAsset = async(req, res, handleErr)=>{
+    const videoId = req.params.get("videoId");
+    const type= req.params.get("type");
+
+    DB.update();
+    const video = DB.videos.find(video => video.videoId === videoId);
+
+    if(!video){
+        return handleErr({
+            status: 404,
+            message: "Video not found"
+        });
+    }
+
+    let file;
+    let mimeType;
+    let filename;
+    switch(type){
+        case "thumbnail":
+            file= await fs.open(`./storage/${videoId/thumbnail.jpg}`, 'r');
+            mimeType = "image/jpeg";
+            break;
+        case "original":
+            file = await fs.open(`./storage/${videoId}/original.${video.extension}`, 'r');
+            video.extension === "mp4"
+              ? (mimeType = "video/mp4")
+              : (mimeType = "video/webm");
+            filename = `${video.name}.${video.extension}`;
+            
+    }
+
+    //grab file size
+    const stat = await file.stat();
+
+    const fileStream = file.createReadStream();
+
+    if(type !== "thumbnail"){
+        res.setHeader("Content-Disposition", `attachment; filename=${filename}`);
+    }
+
+    //Set the content-type header based on the file type
+    res.setHeader("Content-Type", mimeType);
+    res.setHeader("Content-Length", stat.size);
+
+    res.status(200);
+
+    await pipeline(fileStream, res);
+
+    file.close();
+
+}
+
 const controller= {
     getVideos,
-    uploadVideo
+    uploadVideo,
+    getVideoAsset
 }
 
 module.exports = controller;
