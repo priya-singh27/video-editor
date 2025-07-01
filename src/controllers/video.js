@@ -23,6 +23,14 @@ const uploadVideo = async(req, res, handleErr)=>{
     
     const videoId = crypto.randomBytes(4).toString("hex");
 
+    const FORMATS_SUPPORTED = ["mov", "mp4", "webm"];
+
+    if(!FORMATS_SUPPORTED.includes(extension)){
+        return handleErr({
+            status:400,
+            message: "Valid formats: mp4, mov or webm"
+        })
+    }
     try{
         await fs.mkdir(`./storage/${videoId}`);
         const originalFilePath = `./storage/${videoId}/original.${extension}`;
@@ -51,16 +59,14 @@ const uploadVideo = async(req, res, handleErr)=>{
             resizes: {}
         });
         DB.save();
-        res.status(200).json({
+        res.status(201).json({
             status: "success",
             message: "The file was uploaded successfully"
-        })
+        });
     }catch(e){
         utils.deleteFolder(`./storage/${videoId}`);
         if (e.code !== "ECONNRESET") return handleErr(e);
     }
-
-    console.log(specifiedFileName, filename, extension);
 }
 
 const controller= {
