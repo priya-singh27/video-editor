@@ -7,13 +7,10 @@ const DB = require('../DB');
 const FF = require('../../lib/FF');
 
 const getVideos = (req, res, handleErr) => {
-    const name = req.params.get("name");
+    DB.update();
+    const videos = DB.videos.filter(video => video.userId === req.userId);
 
-    if(name){
-        res.json({message:`Your name is ${name}`})
-    }else{
-        return handleErr({status: 400, message: "Please specify a name"})
-    }
+    res.status(200).json(videos);
 }
 
 const uploadVideo = async(req, res, handleErr)=>{
