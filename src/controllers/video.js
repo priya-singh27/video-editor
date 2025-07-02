@@ -138,10 +138,46 @@ const getVideoAsset = async(req, res, handleErr)=>{
 
 }
 
+const extractAudio = async (req,res, handleErr)=>{
+    const videoId= req.params.get("videoId");
+
+    DB.update();
+    const video = DB.videos.find(video => video.videoId === videoId);
+
+    if(video.extractedAudio){
+        return handleErr({
+            status: 400,
+            message:"Audio has already been extracted for this video"
+        });
+    }
+
+    const originalVideoPath = `./storage/${videoId}/original.${video.extension}`;
+    const targetAudioPath = `./storage/${videoId}/audio.aac`;
+    try{
+        await FF.extractAudio(originalVideoPath, targetAudioPath);
+
+        video.extractedAudio = true;
+
+        DB.save();
+
+        res.status(200).json({
+            status:"success",
+            message:"The audio was extracted successfully"
+        });
+
+    }catch(err){
+        utils.deleteFile(targetAudioPath);
+        return handleErr(err)
+    }
+
+    
+}
+
 const controller= {
     getVideos,
     uploadVideo,
-    getVideoAsset
+    getVideoAsset,
+    extractAudio,
 }
 
 module.exports = controller;
