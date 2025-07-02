@@ -5,6 +5,9 @@ const {pipeline} = require("node:stream/promises");
 const utils = require('../../lib/utils');
 const DB = require('../DB');
 const FF = require('../../lib/FF');
+const JobQueue = require('../../lib/JobQueue')
+
+const jobs = new JobQueue();
 
 const getVideos = (req, res, handleErr) => {
     DB.update();
@@ -96,7 +99,7 @@ const getVideoAsset = async(req, res, handleErr)=>{
         break;
 
       case "resize":
-        const dimensions = req.params.get("demensions");
+        const dimensions = req.params.get("dimensions");
         file= await fs.open(`./storage/${videoId}/${dimensions}.${video.extension}`);
         video.extension === "mp4"
           ? (mimeType = "video/mp4")
@@ -173,11 +176,39 @@ const extractAudio = async (req,res, handleErr)=>{
     
 }
 
+const resizeVideo = async (req, res, handleErr) => {
+    const videoId = req.body.videoId;
+    const width = Number(req.body.width);
+    const height = Number(req.body.height);
+
+    DB.update();
+
+    const video = DB.videos.find(video => video.videoId === videoId);
+
+    video.resizes[`${width}x${height}`] = {processing : true};// "1920x1080" : {processing:true}
+
+    jobs.enqueue({
+        type:"resize",
+        videoId,
+        width,
+        height,
+    });
+
+    DB.save();
+
+    res.status(201).json({
+        status:"success",
+        message:"The video is now being processed!"
+    });
+
+}
+
 const controller= {
     getVideos,
     uploadVideo,
     getVideoAsset,
     extractAudio,
+    resizeVideo
 }
 
 module.exports = controller;
