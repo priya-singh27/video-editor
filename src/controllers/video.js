@@ -43,7 +43,6 @@ const uploadVideo = async(req, res, handleErr)=>{
 
         //Get the dimensions
         const dimensions = await FF.getDimensions(originalFilePath);
-        console.log(dimensions);
         
         DB.update();
         DB.videos.unshift({
@@ -53,7 +52,7 @@ const uploadVideo = async(req, res, handleErr)=>{
             extension,
             dimensions,
             userId: req.userId,
-            extractedAudion:false,
+            extractedAudio:false,
             resizes: {}
         });
         DB.save();
@@ -69,7 +68,7 @@ const uploadVideo = async(req, res, handleErr)=>{
 
 const getVideoAsset = async(req, res, handleErr)=>{
     const videoId = req.params.get("videoId");
-    const type= req.params.get("type");
+    const type= req.params.get("type");//thumbnail, original, audio, resize
 
     DB.update();
     const video = DB.videos.find(video => video.videoId === videoId);
@@ -84,18 +83,37 @@ const getVideoAsset = async(req, res, handleErr)=>{
     let file;
     let mimeType;
     let filename;
-    switch(type){
-        case "thumbnail":
-            file= await fs.open(`./storage/${videoId/thumbnail.jpg}`, 'r');
-            mimeType = "image/jpeg";
-            break;
-        case "original":
-            file = await fs.open(`./storage/${videoId}/original.${video.extension}`, 'r');
-            video.extension === "mp4"
-              ? (mimeType = "video/mp4")
-              : (mimeType = "video/webm");
-            filename = `${video.name}.${video.extension}`;
-            
+    switch (type) {
+      case "thumbnail":
+        file = await fs.open(`./storage/${videoId}/thumbnail.jpg`, "r");
+        mimeType = "image/jpeg";
+        break;
+
+      case "audio":
+        file = await fs.open(`./storage/${videoId}/audio.aac`, "r");
+        mimeType = "audio/aac";
+        filename = `${video.filename}-audio.aac`;
+        break;
+
+      case "resize":
+        const dimensions = req.params.get("demensions");
+        file= await fs.open(`./storage/${videoId}/${dimensions}.${video.extension}`);
+        video.extension === "mp4"
+          ? (mimeType = "video/mp4")
+          : (mimeType = "video/webm");
+        filename = `${video.filename}-${dimensions}.${video.extension}`
+        break;
+
+      case "original":
+        file = await fs.open(
+          `./storage/${videoId}/original.${video.extension}`,
+          "r"
+        );
+        video.extension === "mp4"
+          ? (mimeType = "video/mp4")
+          : (mimeType = "video/webm");
+        filename = `${video.filename}.${video.extension}`;
+        break;
     }
 
     //grab file size
@@ -104,6 +122,7 @@ const getVideoAsset = async(req, res, handleErr)=>{
     const fileStream = file.createReadStream();
 
     if(type !== "thumbnail"){
+        //Set a header to prompt for download
         res.setHeader("Content-Disposition", `attachment; filename=${filename}`);
     }
 
