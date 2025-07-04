@@ -5,9 +5,14 @@ const {pipeline} = require("node:stream/promises");
 const utils = require('../../lib/utils');
 const DB = require('../DB');
 const FF = require('../../lib/FF');
-const JobQueue = require('../../lib/JobQueue')
+const JobQueue = require('../../lib/JobQueue');
+const cluster = require("node:cluster");
 
-const jobs = new JobQueue();
+let jobs ;
+
+if(cluster.isPrimary){
+    jobs = new JobQueue();
+}
 
 const getVideos = (req, res, handleErr) => {
     DB.update();
@@ -187,12 +192,24 @@ const resizeVideo = async (req, res, handleErr) => {
 
     video.resizes[`${width}x${height}`] = {processing : true};// "1920x1080" : {processing:true}
 
-    jobs.enqueue({
-        type:"resize",
-        videoId,
-        width,
-        height,
-    });
+    if(cluster.isPrimary){//if this is primary process
+        jobs.enqueue({
+          type: "resize",
+          videoId,
+          width,
+          height,
+        });
+    }else{//if this is child process
+        process.send({
+          messageType: "new-resize",
+          data: {
+            videoId,
+            width,
+            height,
+          },
+        });
+    }
+
 
     DB.save();
 
