@@ -11,6 +11,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "cpeak": "^1.4.0"
+    "cpeak": "^1.4.0",
+    "express": "^5.1.0"
   }
 }
