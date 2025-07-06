@@ -5,12 +5,12 @@ const {pipeline} = require("node:stream/promises");
 const utils = require('../../lib/utils');
 const DB = require('../DB');
 const FF = require('../../lib/FF');
-const JobQueue = require('../../lib/JobQueue');
 const cluster = require("node:cluster");
 
 let jobs ;
 
 if(cluster.isPrimary){
+    const JobQueue = require('../../lib/JobQueue');
     jobs = new JobQueue();
 }
 
@@ -75,8 +75,11 @@ const uploadVideo = async(req, res, handleErr)=>{
 }
 
 const getVideoAsset = async(req, res, handleErr)=>{
-    const videoId = req.params.get("videoId");
-    const type= req.params.get("type");//thumbnail, original, audio, resize
+    // const videoId = req.params.get("videoId");
+    // const type= req.params.get("type");//thumbnail, original, audio, resize
+
+    const videoId = req.query.videoId;
+    const type = req.query.type;
 
     DB.update();
     const video = DB.videos.find(video => video.videoId === videoId);
@@ -147,7 +150,8 @@ const getVideoAsset = async(req, res, handleErr)=>{
 }
 
 const extractAudio = async (req,res, handleErr)=>{
-    const videoId= req.params.get("videoId");
+    // const videoId= req.params.get("videoId");
+    const videoId = req.query.videoId;
 
     DB.update();
     const video = DB.videos.find(video => video.videoId === videoId);
